@@ -37,7 +37,18 @@ func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegis
 		Service: &consulapi.AgentService{
 			Service: name,
 			Tags:    tags,
+			Port:    443,
 			Meta:    a.Tags(),
+		},
+		Checks: []*consulapi.HealthCheck{
+			{
+				CheckID:     fmt.Sprintf("service:%s", name),
+				Name:        name,
+				Node:        node,
+				Notes:       "created by consul-api-gateway-sync",
+				ServiceName: name,
+				Status:      "passing",
+			},
 		},
 		// Creating a service should not modify the node
 		// See https://github.com/hashicorp/terraform-provider-consul/issues/101

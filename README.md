@@ -14,7 +14,9 @@ Pass -tag to set custom tags per service. The value of each tag is evaluated as 
 `.Tags`
 
 ### To register a service with [Traefik][traefik]
-* `-tag "traefik.enabled=true"`
-* `-tag "traefik.frontend.rule=Host: {{.Name() }}.example.org; AddPrefix: /{{.Tags.STAGE }}/"`
+* `-tag traefik.enabled=true`
+* `-tag traefik.protocol=https`
+* `-tag traefik.frontend.passHostHeader=false`
+* `-tag traefik.frontend.rule=Host: {{.Name() }}.example.org; AddPrefix: /{{.Tags.STAGE }}/`
 
 [traefik]: https://traefik.io
