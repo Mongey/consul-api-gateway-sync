@@ -19,4 +19,20 @@ Pass -tag to set custom tags per service. The value of each tag is evaluated as 
 * `-tag traefik.frontend.passHostHeader=false`
 * `-tag traefik.frontend.rule=Host: {{.Name() }}.example.org; AddPrefix: /{{.Tags.STAGE }}/`
 
+### Required IAM policy
+
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "apigateway:GET",
+      "Resource": "*"
+    }
+  ]
+}
+```
+
 [traefik]: https://traefik.io
