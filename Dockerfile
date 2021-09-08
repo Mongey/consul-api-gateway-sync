@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.16.1 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.17.0 AS builder
 
 WORKDIR /go/src/github.com/Mongey/consul-api-gateway-sync
 
