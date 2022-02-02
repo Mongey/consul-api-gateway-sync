@@ -2,6 +2,10 @@ FROM --platform=$BUILDPLATFORM golang:1.17.0 AS builder
 
 WORKDIR /go/src/github.com/Mongey/consul-api-gateway-sync
 
+COPY go.mod ./
+COPY go.sum ./
+RUN go mod download
+
 COPY . ./
 ENV CGO_ENABLED=0
 ARG TARGETOS
