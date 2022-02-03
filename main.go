@@ -48,7 +48,7 @@ func syncGateways(logger hclog.Logger) error {
 
 			_, err := consulClient.Catalog().Register(service.ConsulService(tags), nil)
 			if err != nil {
-				logger.Error("Failed to register", "error", err)
+				logger.Error("Failed to register", "error", err, "service", service.Tags())
 			}
 		}
 

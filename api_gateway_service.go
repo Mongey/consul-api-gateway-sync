@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/apigateway"
@@ -15,6 +16,27 @@ type APIGatewayService struct {
 	restAPI *apigateway.RestApi
 }
 
+// Tags returns the tags for an APIGatewayService
+func (a *APIGatewayService) Tags() map[string]string {
+	tags := make(map[string]string)
+	for k, v := range a.restAPI.Tags {
+		tags[validTag(k)] = validTag(*v)
+	}
+	return tags
+}
+
+// validTag removes non-alphanumeric characters from a tag
+// https://github.com/hashicorp/consul/issues/8127
+func validTag(s string) string {
+	replacementSeperator := "-"
+	reg, err := regexp.Compile("[^a-zA-Z0-9]+")
+	if err != nil {
+		return ""
+	}
+	return reg.ReplaceAllString(s, replacementSeperator)
+}
+
+// NewService creates a APIGatewayService from a RestAPI
 func NewService(restAPI *apigateway.RestApi, region string) *APIGatewayService {
 	return &APIGatewayService{
 		region:  region,
@@ -22,6 +44,7 @@ func NewService(restAPI *apigateway.RestApi, region string) *APIGatewayService {
 	}
 }
 
+// ConsulService builds a consul service
 func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegistration {
 	node := a.Name()
 	name := a.Name()
@@ -56,14 +79,6 @@ func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegis
 	}
 
 	return registration
-}
-
-func (a *APIGatewayService) Tags() map[string]string {
-	tags := make(map[string]string)
-	for k, v := range a.restAPI.Tags {
-		tags[k] = *v
-	}
-	return tags
 }
 
 func (a *APIGatewayService) Stage() string {

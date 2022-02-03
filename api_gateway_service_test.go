@@ -1,10 +1,40 @@
 package main
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/apigateway"
 )
+
+func Test_TagsReplacement(t *testing.T) {
+	stage := "staging"
+	logicalID := "ApiGatewayRestApi"
+	stackID := "arn:aws:cloudformation:us-west-2:1234567:stack/my-service-" + stage + "/7fd50290-84eb-11ec-93c7-0ac7bf603f03"
+	serviceName := stage + "-my-service"
+	service := &APIGatewayService{
+		region: "us-west-2",
+		restAPI: &apigateway.RestApi{
+			Name: &serviceName,
+			Tags: map[string]*string{
+				"STAGE":                         &stage,
+				"aws:cloudformation:logical-id": &logicalID,
+				"aws:cloudformation:stack-id":   &stackID,
+			},
+		},
+	}
+
+	expectedResult := map[string]string{
+		"STAGE":                         stage,
+		"aws-cloudformation-logical-id": logicalID,
+		"aws-cloudformation-stack-id":   "arn-aws-cloudformation-us-west-2-1234567-stack-my-service-staging-7fd50290-84eb-11ec-93c7-0ac7bf603f03",
+	}
+	result := service.Tags()
+
+	if !reflect.DeepEqual(result, expectedResult) {
+		t.Errorf("Got '%s', expected '%s'", result, expectedResult)
+	}
+}
 
 func Test_NameParsing(t *testing.T) {
 	stage := "staging"
