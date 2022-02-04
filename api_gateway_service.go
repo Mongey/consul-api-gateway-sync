@@ -49,6 +49,8 @@ func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegis
 	node := a.Name()
 	name := a.Name()
 
+	serviceMeta := a.Tags()
+	serviceMeta["external-source"] = "aws"
 	registration := &consulapi.CatalogRegistration{
 		Node: node,
 		NodeMeta: map[string]string{
@@ -61,7 +63,7 @@ func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegis
 			Service: name,
 			Tags:    tags,
 			Port:    443,
-			Meta:    a.Tags(),
+			Meta:    serviceMeta,
 		},
 		Checks: []*consulapi.HealthCheck{
 			{
