@@ -48,7 +48,7 @@ const applicationName = "consul-api-gateway-sync"
 
 // ConsulService builds a consul service
 func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegistration {
-	node := a.Name()
+	node := a.ID()
 	name := a.Name()
 
 	serviceMeta := a.Tags()
@@ -125,6 +125,10 @@ func (a *APIGatewayService) TagsFromTemplate(templates []string) []string {
 	}
 
 	return result
+}
+
+func (a *APIGatewayService) ID() string {
+	return *a.restAPI.Id
 }
 
 func (a *APIGatewayService) Name() string {
