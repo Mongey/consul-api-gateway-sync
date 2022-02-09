@@ -63,6 +63,7 @@ func Test_TagsTemplate(t *testing.T) {
 		"traefik-dev-private.tags=private",
 		"traefik-dev-private.entryPoints=http",
 		"traefik-dev-private.frontend.rule=Host: {{ .Name }}.example.org; AddPrefix: /{{index .Tags \"STAGE\" }}/",
+		"{{index .Tags \"A key that does not exist\" }}",
 	}
 
 	expectedResult := []string{

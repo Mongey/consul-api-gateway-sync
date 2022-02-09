@@ -124,6 +124,17 @@ func (a *APIGatewayService) TagsFromTemplate(templates []string) []string {
 		result[i] = r.String()
 	}
 
+	return nonEmpty(result)
+}
+
+// nonEmpty returns all strings in the slice are not empty
+func nonEmpty(s []string) []string {
+	result := make([]string, 0)
+	for _, v := range s {
+		if v != "" {
+			result = append(result, v)
+		}
+	}
 	return result
 }
 
