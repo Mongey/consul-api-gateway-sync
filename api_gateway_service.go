@@ -44,6 +44,8 @@ func NewService(restAPI *apigateway.RestApi, region string) *APIGatewayService {
 	}
 }
 
+const applicationName = "consul-api-gateway-sync"
+
 // ConsulService builds a consul service
 func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegistration {
 	node := a.Name()
@@ -56,7 +58,7 @@ func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegis
 		NodeMeta: map[string]string{
 			"external-node":  "true",
 			"external-probe": "true",
-			"registered-by":  "consul-api-gateway-sync",
+			"registered-by":  applicationName,
 		},
 		Address: a.Address(),
 		Service: &consulapi.AgentService{
