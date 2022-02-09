@@ -15,47 +15,87 @@ import (
 func syncGateways(logger hclog.Logger) error {
 	var awsRegion string
 	var tagFlags = StringSet{}
+	var filterFlags = StringSet{}
 
 	flag.StringVar(&awsRegion, "aws-region", "us-west-2", "the aws region to search for api-gateways")
 	flag.Var(&tagFlags, "tag", "a template to add as a tag")
-	sleepTime := flag.Int("sleep", 10, "the number of seconds to sleep while polling")
+	flag.Var(&filterFlags, "filter", "filters")
+	sleepTime := flag.Int("sleep", 90, "the number of seconds to sleep while polling")
 	flag.Parse()
 
 	logger.Info("creating api-gateway metadata client")
-	mySession := session.Must(session.NewSession())
-	svc := apigateway.New(mySession, aws.NewConfig().WithRegion(awsRegion))
-
-	consulClient, err := consulapi.NewClient(consulapi.DefaultConfig())
+	client, err := NewClient(filterFlags.value, tagFlags.value, awsRegion, logger)
 	if err != nil {
-		logger.Error("failed to build consul client", "error", err)
 		return err
 	}
 
 	logger.Info("starting gateway watch")
 	for {
-		restAPIResp, err := svc.GetRestApis(&apigateway.GetRestApisInput{})
+		err := client.registerServices()
 		if err != nil {
-			logger.Error("Failed to list rest apis", "error", err)
-			return err
+			logger.Error("starting gateway watch")
 		}
-
-		logger.Debug("Got rest-apis", "items", len(restAPIResp.Items))
-
-		for _, item := range restAPIResp.Items {
-			service := NewService(item, awsRegion)
-			tags := service.TagsFromTemplate(tagFlags.value)
-			logger.Info("Registering service", "service", service.Name(), "address", service.Address(), "tags", tags)
-
-			_, err := consulClient.Catalog().Register(service.ConsulService(tags), nil)
-			if err != nil {
-				logger.Error("Failed to register", "error", err, "service", service.Tags())
-			}
-		}
-
-		logger.Info("Sleeping", "time", *sleepTime)
+		logger.Debug("Sleeping", "time", *sleepTime)
 		time.Sleep(time.Second * time.Duration(*sleepTime))
 	}
+}
 
+type Client struct {
+	flags        []string
+	tags         []string
+	region       string
+	logger       hclog.Logger
+	svc          *apigateway.APIGateway
+	consulClient *consulapi.Client
+}
+
+func NewClient(flags []string, tags []string, region string, logger hclog.Logger) (*Client, error) {
+	mySession := session.Must(session.NewSession())
+	svc := apigateway.New(mySession, aws.NewConfig().WithRegion(region))
+	consulClient, err := consulapi.NewClient(consulapi.DefaultConfig())
+	if err != nil {
+		logger.Error("failed to build consul client", "error", err)
+		return nil, err
+	}
+
+	return &Client{flags, tags, region, logger, svc, consulClient}, nil
+}
+
+func (c *Client) registerServices() error {
+	restAPIResp, err := c.svc.GetRestApis(&apigateway.GetRestApisInput{})
+	if err != nil {
+		c.logger.Error("Failed to list rest apis", "error", err)
+		return err
+	}
+
+	c.logger.Debug("Got rest-apis", "items", len(restAPIResp.Items))
+
+	services := make([]*APIGatewayService, 0)
+	for _, item := range restAPIResp.Items {
+		service := NewService(item, c.region)
+		services = append(services, service)
+	}
+
+	filteredServices := FilterServices(services, c.flags)
+	c.logger.Info("Got", len(services), ", ", len(filteredServices), "remain")
+
+	//registedServices, _, err := consulClient.Catalog().Services(&consulapi.QueryOptions{
+	//NodeMeta: map[string]string{
+	//"registered-by": applicationName,
+	//},
+	//})
+
+	//servicesToRegister, servicesToRegister, err := services(services, registedServices)
+
+	for _, service := range filteredServices {
+		tags := service.TagsFromTemplate(c.tags)
+		c.logger.Info("Registering service", "service", service.Name(), "address", service.Address(), "tags", tags)
+		_, err := c.consulClient.Catalog().Register(service.ConsulService(tags), nil)
+		if err != nil {
+			c.logger.Error("Failed to register", "error", err, "service", service.Tags())
+		}
+	}
+	return nil
 }
 
 func main() {

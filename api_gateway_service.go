@@ -143,9 +143,18 @@ func (a *APIGatewayService) ID() string {
 }
 
 func (a *APIGatewayService) Name() string {
-	nameWithStage := *(a.restAPI.Name)
+	name := *(a.restAPI.Name)
+	if a.Stage() != "" {
+		name = strings.Replace(name, fmt.Sprintf("%s-", a.Stage()), "", 1)
+		name = strings.Replace(name, fmt.Sprintf("-%s", a.Stage()), "", 1)
+	}
 
-	return strings.Replace(nameWithStage, fmt.Sprintf("%s-", a.Stage()), "", 1)
+	serviceName := a.restAPI.Tags["service"]
+	if serviceName != nil {
+		return *serviceName
+	}
+
+	return name
 }
 
 func (a *APIGatewayService) Address() string {

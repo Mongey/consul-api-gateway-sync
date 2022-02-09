@@ -10,16 +10,15 @@ import (
 func Test_TagsReplacement(t *testing.T) {
 	stage := "staging"
 	logicalID := "ApiGatewayRestApi"
-	stackID := "arn:aws:cloudformation:us-west-2:1234567:stack/my-service-" + stage + "/7fd50290-84eb-11ec-93c7-0ac7bf603f03"
 	serviceName := stage + "-my-service"
 	service := &APIGatewayService{
 		region: "us-west-2",
 		restAPI: &apigateway.RestApi{
 			Name: &serviceName,
 			Tags: map[string]*string{
-				"STAGE":                         &stage,
-				"aws:cloudformation:logical-id": &logicalID,
-				"aws:cloudformation:stack-id":   &stackID,
+				"STAGE":                         stringP(stage),
+				"aws:cloudformation:logical-id": stringP(logicalID),
+				"aws:cloudformation:stack-id":   stringP("arn:aws:cloudformation:us-west-2:1234567:stack/my-service-" + stage + "/7fd50290-84eb-11ec-93c7-0ac7bf603f03"),
 			},
 		},
 	}
@@ -36,24 +35,58 @@ func Test_TagsReplacement(t *testing.T) {
 	}
 }
 
+func stringP(v string) *string { return &v }
+
 func Test_NameParsing(t *testing.T) {
-	stage := "staging"
-	serviceName := "staging-my-service"
-	service := &APIGatewayService{
-		region: "us-west-2",
-		restAPI: &apigateway.RestApi{
-			Name: &serviceName,
-			Tags: map[string]*string{
-				"STAGE": &stage,
+	tests := map[string]struct {
+		expectedServiceName string
+		service             *APIGatewayService
+	}{
+		"stage prefix replacement": {
+			"my-service",
+			&APIGatewayService{
+				region: "us-west-2",
+				restAPI: &apigateway.RestApi{
+					Name: stringP("staging-my-service"),
+					Tags: map[string]*string{
+						"STAGE": stringP("staging"),
+					},
+				},
+			},
+		},
+		"stage suffix replacement": {
+			"my-service",
+			&APIGatewayService{
+				region: "us-west-2",
+				restAPI: &apigateway.RestApi{
+					Name: stringP("my-service-staging"),
+					Tags: map[string]*string{
+						"STAGE": stringP("staging"),
+					},
+				},
+			},
+		},
+		"service name use": {
+			"my-service",
+			&APIGatewayService{
+				region: "us-west-2",
+				restAPI: &apigateway.RestApi{
+					Name: stringP("staging-my-service"),
+					Tags: map[string]*string{
+						"service": stringP("my-service"),
+					},
+				},
 			},
 		},
 	}
 
-	expectedName := "my-service"
-	result := service.Name()
-
-	if result != expectedName {
-		t.Errorf("Got '%s', expected '%s'", result, expectedName)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			result := tc.service.Name()
+			if result != tc.expectedServiceName {
+				t.Errorf("Got '%s', expected '%s'", result, tc.expectedServiceName)
+			}
+		})
 	}
 }
 
@@ -73,14 +106,12 @@ func Test_TagsTemplate(t *testing.T) {
 		"traefik-dev-private.frontend.rule=Host: my-service.example.org; AddPrefix: /staging/",
 	}
 
-	stage := "staging"
-	serviceName := "staging-my-service"
 	service := &APIGatewayService{
 		region: "us-west-2",
 		restAPI: &apigateway.RestApi{
-			Name: &serviceName,
+			Name: stringP("staging-my-service"),
 			Tags: map[string]*string{
-				"STAGE": &stage,
+				"STAGE": stringP("staging"),
 			},
 		},
 	}
