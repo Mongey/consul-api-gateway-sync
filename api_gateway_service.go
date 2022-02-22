@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Masterminds/sprig"
 	"github.com/aws/aws-sdk-go/service/apigateway"
 	consulapi "github.com/hashicorp/consul/api"
 )
@@ -101,7 +102,7 @@ type TemplateContext struct {
 func (a *APIGatewayService) TagsFromTemplate(templates []string) []string {
 	result := make([]string, len(templates))
 	for i, tmpl := range templates {
-		t := template.New(fmt.Sprintf("Template %d", i))
+		t := template.New(fmt.Sprintf("Template %d", i)).Funcs(sprig.FuncMap())
 
 		tt, err := t.Parse(tmpl)
 		if err != nil {
