@@ -12,13 +12,33 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
+const applicationName = "consul-api-gateway-sync"
+
+// NewService creates a APIGatewayService from a RestAPI
+func NewService(restAPI *apigateway.RestApi, region string, stageNames []string) *APIGatewayService {
+	return &APIGatewayService{
+		region:     region,
+		restAPI:    restAPI,
+		StageNames: stageNames,
+	}
+}
+
 type APIGatewayService struct {
-	region  string
-	restAPI *apigateway.RestApi
+	region     string
+	restAPI    *apigateway.RestApi
+	StageNames []string
 }
 
 // Tags returns the tags for an APIGatewayService
 func (a *APIGatewayService) Tags() map[string]string {
+	tags := make(map[string]string)
+	for k, v := range a.restAPI.Tags {
+		tags[k] = *v
+	}
+	return tags
+}
+
+func (a *APIGatewayService) nodeTags() map[string]string {
 	tags := make(map[string]string)
 	for k, v := range a.restAPI.Tags {
 		tags[validTag(k)] = validTag(*v)
@@ -37,22 +57,13 @@ func validTag(s string) string {
 	return reg.ReplaceAllString(s, replacementSeperator)
 }
 
-// NewService creates a APIGatewayService from a RestAPI
-func NewService(restAPI *apigateway.RestApi, region string) *APIGatewayService {
-	return &APIGatewayService{
-		region:  region,
-		restAPI: restAPI,
-	}
-}
-
-const applicationName = "consul-api-gateway-sync"
-
 // ConsulService builds a consul service
-func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegistration {
+func (a *APIGatewayService) ConsulService(templateTags []string) *consulapi.CatalogRegistration {
 	node := a.ID()
 	name := a.Name()
 
-	serviceMeta := a.Tags()
+	tags := a.TagsFromTemplate(templateTags)
+	serviceMeta := a.nodeTags()
 	serviceMeta["external-source"] = "aws"
 	registration := &consulapi.CatalogRegistration{
 		Node: node,
@@ -73,7 +84,7 @@ func (a *APIGatewayService) ConsulService(tags []string) *consulapi.CatalogRegis
 				CheckID:     fmt.Sprintf("service:%s", name),
 				Name:        name,
 				Node:        node,
-				Notes:       "created by consul-api-gateway-sync",
+				Notes:       fmt.Sprintf("created by %s", applicationName),
 				ServiceName: name,
 				Status:      "passing",
 			},
@@ -95,8 +106,9 @@ func (a *APIGatewayService) Stage() string {
 }
 
 type TemplateContext struct {
-	Name string
-	Tags map[string]string
+	Name       string
+	Tags       map[string]string
+	StageNames []string
 }
 
 func (a *APIGatewayService) TagsFromTemplate(templates []string) []string {
@@ -113,8 +125,9 @@ func (a *APIGatewayService) TagsFromTemplate(templates []string) []string {
 		var r bytes.Buffer
 
 		f := TemplateContext{
-			Name: a.Name(),
-			Tags: a.Tags(),
+			Name:       a.Name(),
+			Tags:       a.Tags(),
+			StageNames: a.StageNames,
 		}
 
 		if err := tt.Execute(&r, f); err != nil {

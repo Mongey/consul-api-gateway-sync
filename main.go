@@ -72,7 +72,22 @@ func (c *Client) registerServices() error {
 
 	services := make([]*APIGatewayService, 0)
 	for _, item := range restAPIResp.Items {
-		service := NewService(item, c.region)
+		stages, err := c.svc.GetStages(&apigateway.GetStagesInput{RestApiId: item.Id})
+		if err != nil {
+			c.logger.Error("Failed to list stages", "error", err)
+			return err
+		}
+
+		stageNames := make([]string, 0)
+		if stages.Item != nil {
+			for _, stage := range stages.Item {
+				stageNames = append(stageNames, *(stage.StageName))
+			}
+		}
+
+		service := NewService(item, c.region, stageNames)
+
+		c.logger.Info("RestAPI", service.ID(), "StagNames", service.StageNames, "service", service.Name(), "tags", service.Tags())
 		services = append(services, service)
 	}
 
@@ -88,9 +103,9 @@ func (c *Client) registerServices() error {
 	//servicesToRegister, servicesToRegister, err := services(services, registedServices)
 
 	for _, service := range filteredServices {
-		tags := service.TagsFromTemplate(c.tags)
-		c.logger.Info("Registering service", "service", service.Name(), "address", service.Address(), "tags", tags)
-		_, err := c.consulClient.Catalog().Register(service.ConsulService(tags), nil)
+		consulService := service.ConsulService(c.tags)
+		c.logger.Info("Registering service", "service", service.Name(), "address", service.Address())
+		_, err := c.consulClient.Catalog().Register(consulService, nil)
 		if err != nil {
 			c.logger.Error("Failed to register", "error", err, "service", service.Tags())
 		}
