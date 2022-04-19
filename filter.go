@@ -63,10 +63,11 @@ func filterMatches(filter string, service *APIGatewayService) bool {
 	return f.filterMatches(service)
 }
 
-func FilterServices(availableAPIs []*APIGatewayService, filters []string) []*APIGatewayService {
-	if len(filters) == 0 {
+func FilterServices(availableAPIs []*APIGatewayService, filters []string, exclusionFilters []string) []*APIGatewayService {
+	if len(filters) == 0 && len(exclusionFilters) == 0 {
 		return availableAPIs
 	}
+
 	filteredServices := make([]*APIGatewayService, 0)
 	for _, service := range availableAPIs {
 		for _, filter := range filters {
@@ -75,5 +76,21 @@ func FilterServices(availableAPIs []*APIGatewayService, filters []string) []*API
 			}
 		}
 	}
-	return filteredServices
+
+	finalServices := make([]*APIGatewayService, 0)
+
+	for _, service := range filteredServices {
+		shouldBeFiltered := false
+		for _, filter := range exclusionFilters {
+			if filterMatches(filter, service) {
+				shouldBeFiltered = true
+			}
+		}
+
+		if !shouldBeFiltered {
+			finalServices = append(finalServices, service)
+		}
+	}
+
+	return finalServices
 }

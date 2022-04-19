@@ -16,15 +16,17 @@ func syncGateways(logger hclog.Logger) error {
 	var awsRegion string
 	var tagFlags = StringSet{}
 	var filterFlags = StringSet{}
+	var exclusionFilterFlags = StringSet{}
 
 	flag.StringVar(&awsRegion, "aws-region", "us-west-2", "the aws region to search for api-gateways")
-	flag.Var(&tagFlags, "tag", "a template to add as a tag")
 	flag.Var(&filterFlags, "filter", "filters")
+	flag.Var(&exclusionFilterFlags, "exclude", "filters")
+	flag.Var(&tagFlags, "tag", "a template to add as a tag")
 	sleepTime := flag.Int("sleep", 90, "the number of seconds to sleep while polling")
 	flag.Parse()
 
 	logger.Info("creating api-gateway metadata client")
-	client, err := NewClient(filterFlags.value, tagFlags.value, awsRegion, logger)
+	client, err := NewClient(filterFlags.value, exclusionFilterFlags.value, tagFlags.value, awsRegion, logger)
 	if err != nil {
 		return err
 	}
@@ -41,15 +43,16 @@ func syncGateways(logger hclog.Logger) error {
 }
 
 type Client struct {
-	flags        []string
-	tags         []string
-	region       string
-	logger       hclog.Logger
-	svc          *apigateway.APIGateway
-	consulClient *consulapi.Client
+	flags                []string
+	exclusionFilterFlags []string
+	tags                 []string
+	region               string
+	logger               hclog.Logger
+	svc                  *apigateway.APIGateway
+	consulClient         *consulapi.Client
 }
 
-func NewClient(flags []string, tags []string, region string, logger hclog.Logger) (*Client, error) {
+func NewClient(flags []string, exclusionFilterFlags []string, tags []string, region string, logger hclog.Logger) (*Client, error) {
 	mySession := session.Must(session.NewSession())
 	svc := apigateway.New(mySession, aws.NewConfig().WithRegion(region))
 	consulClient, err := consulapi.NewClient(consulapi.DefaultConfig())
@@ -58,7 +61,7 @@ func NewClient(flags []string, tags []string, region string, logger hclog.Logger
 		return nil, err
 	}
 
-	return &Client{flags, tags, region, logger, svc, consulClient}, nil
+	return &Client{flags, exclusionFilterFlags, tags, region, logger, svc, consulClient}, nil
 }
 
 func (c *Client) registerServices() error {
@@ -91,7 +94,7 @@ func (c *Client) registerServices() error {
 		services = append(services, service)
 	}
 
-	filteredServices := FilterServices(services, c.flags)
+	filteredServices := FilterServices(services, c.flags, c.exclusionFilterFlags)
 	c.logger.Info("Got", len(services), ", ", len(filteredServices), "remain")
 
 	//registedServices, _, err := consulClient.Catalog().Services(&consulapi.QueryOptions{

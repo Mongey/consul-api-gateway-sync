@@ -12,6 +12,11 @@ func Test_FilterServices(t *testing.T) {
 		"Name=tag:STAGE,Values=dev",
 		"Name=tag:env,Values=dev",
 	}
+
+	exclusionFilters := []string{
+		"Name=tag:service,Values=bad-service-dev-env",
+	}
+
 	devStageService := &APIGatewayService{
 		region: "us-west-2",
 		restAPI: &apigateway.RestApi{
@@ -50,14 +55,26 @@ func Test_FilterServices(t *testing.T) {
 		},
 	}
 
+	devEnvServiceToBeFiltered := &APIGatewayService{
+		region: "us-west-2",
+		restAPI: &apigateway.RestApi{
+			Name: stringP("bad-service-dev-env"),
+			Tags: map[string]*string{
+				"env":     stringP("dev"),
+				"service": stringP("bad-service-dev-env"),
+			},
+		},
+	}
+
 	services := []*APIGatewayService{
 		devStageService,
 		devEnvService,
+		devEnvServiceToBeFiltered,
 		prdEnvService,
 		blankService,
 	}
 
-	result := FilterServices(services, filters)
+	result := FilterServices(services, filters, exclusionFilters)
 	expectedResult := []*APIGatewayService{
 		devStageService,
 		devEnvService,

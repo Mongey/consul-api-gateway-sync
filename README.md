@@ -22,7 +22,6 @@ Pass -tag to set custom tags per service. The value of each tag is evaluated as 
 
 ### Required IAM policy
 
-
 ```json
 {
   "Version": "2012-10-17",
@@ -36,4 +35,10 @@ Pass -tag to set custom tags per service. The value of each tag is evaluated as 
 }
 ```
 
+### Filters
+`-filter 'Name=tag:env,Values=dev'`
+`-exclude 'Name=tag:service,Values=my-private-service'`
+
 [traefik]: https://traefik.io
+
+
