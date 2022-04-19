@@ -117,7 +117,11 @@ func (c *Client) registerServices() error {
 }
 
 func main() {
-	logger := hclog.Default()
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:       "consul-api-gateway",
+		Level:      hclog.Info,
+		JSONFormat: true,
+	})
 	err := syncGateways(logger)
 
 	if err != nil {
