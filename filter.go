@@ -41,17 +41,17 @@ func parseFilter(input string) (*Filter, error) {
 
 func (f *Filter) filterMatches(service *APIGatewayService) bool {
 	tagValue := service.restAPI.Tags[f.name]
-	if tagValue != nil {
-		v := *tagValue
-
-		match, err := regexp.MatchString(f.values, v)
-		if err != nil {
-			return false
-		}
-		return match
+	if tagValue == nil {
+		return false
 	}
+	v := *tagValue
 
-	return false
+	match, err := regexp.MatchString(f.values, v)
+	if err != nil {
+		fmt.Printf("[ERROR] Invalid regexp: %s, %s\n", f.values, err)
+		return false
+	}
+	return match
 }
 
 func filterMatches(filter string, service *APIGatewayService) bool {
@@ -60,27 +60,29 @@ func filterMatches(filter string, service *APIGatewayService) bool {
 		return false
 	}
 
-	return f.filterMatches(service)
+	res := f.filterMatches(service)
+	return res
 }
 
 func FilterServices(availableAPIs []*APIGatewayService, filters []string, exclusionFilters []string) []*APIGatewayService {
-	if len(filters) == 0 && len(exclusionFilters) == 0 {
-		return availableAPIs
-	}
-
 	filteredServices := make([]*APIGatewayService, 0)
 	for _, service := range availableAPIs {
+		matchesFilters := true
 		for _, filter := range filters {
-			if filterMatches(filter, service) {
-				filteredServices = append(filteredServices, service)
+			if !filterMatches(filter, service) {
+				matchesFilters = false
+				break
 			}
+		}
+		if matchesFilters {
+			filteredServices = append(filteredServices, service)
 		}
 	}
 
 	finalServices := make([]*APIGatewayService, 0)
-
 	for _, service := range filteredServices {
 		shouldBeFiltered := false
+
 		for _, filter := range exclusionFilters {
 			if filterMatches(filter, service) {
 				shouldBeFiltered = true

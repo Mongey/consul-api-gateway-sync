@@ -90,7 +90,12 @@ func (c *Client) registerServices() error {
 
 		service := NewService(item, c.region, stageNames)
 
-		c.logger.Info("RestAPI", service.ID(), "StageNames", service.StageNames, "service", service.Name(), "tags", service.Tags())
+		c.logger.Info("RestAPI",
+			"service_id", service.ID(),
+			"StageNames", service.StageNames,
+			"service", service.Name(),
+			"tags", service.Tags(),
+		)
 		services = append(services, service)
 	}
 
