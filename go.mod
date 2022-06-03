@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/aws/aws-sdk-go v1.37.29
-	github.com/hashicorp/consul/api v1.12.0
+	github.com/hashicorp/consul/api v1.13.0
 	github.com/hashicorp/go-hclog v0.15.0
 )
 
