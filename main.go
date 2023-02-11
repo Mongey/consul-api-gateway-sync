@@ -25,13 +25,13 @@ func syncGateways(logger hclog.Logger) error {
 	sleepTime := flag.Int("sleep", 90, "the number of seconds to sleep while polling")
 	flag.Parse()
 
-	logger.Info("creating api-gateway metadata client")
+	logger.Debug("creating api-gateway metadata client")
 	client, err := NewClient(filterFlags.value, exclusionFilterFlags.value, tagFlags.value, awsRegion, logger)
 	if err != nil {
 		return err
 	}
 
-	logger.Info("starting gateway watch")
+	logger.Debug("starting gateway watch")
 	for {
 		err := client.registerServices()
 		if err != nil {
@@ -90,17 +90,17 @@ func (c *Client) registerServices() error {
 
 		service := NewService(item, c.region, stageNames)
 
-		c.logger.Info("RestAPI",
+		c.logger.Debug("RestAPI",
 			"service_id", service.ID(),
 			"StageNames", service.StageNames,
-			"service", service.Name(),
+			"service_name", service.Name(),
 			"tags", service.Tags(),
 		)
 		services = append(services, service)
 	}
 
 	filteredServices := FilterServices(services, c.flags, c.exclusionFilterFlags)
-	c.logger.Info("Got", len(services), ", ", len(filteredServices), "remain")
+	c.logger.Debug("Got", len(services), ", ", len(filteredServices), "remain")
 
 	//registedServices, _, err := consulClient.Catalog().Services(&consulapi.QueryOptions{
 	//NodeMeta: map[string]string{
@@ -112,7 +112,7 @@ func (c *Client) registerServices() error {
 
 	for _, service := range filteredServices {
 		consulService := service.ConsulService(c.tags)
-		c.logger.Info("Registering service", "service", service.Name(), "address", service.Address())
+		c.logger.Debug("Registering service", "service", service.Name(), "address", service.Address())
 		_, err := c.consulClient.Catalog().Register(consulService, nil)
 		if err != nil {
 			c.logger.Error("Failed to register", "error", err, "service", service.Tags())
