@@ -3,28 +3,10 @@ package main
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/aws/aws-sdk-go-v2/service/apigateway/types"
 )
-
-func ptrMap(m map[string]string) map[string]*string {
-	result := make(map[string]*string)
-	for k, v := range m {
-		copiedValue := strings.Clone(v)
-		result[k] = &copiedValue
-	}
-	return result
-}
-
-func nonptrMap(m map[string]*string) map[string]string {
-	result := make(map[string]string)
-	for k, v := range m {
-		result[k] = *v
-	}
-	return result
-}
 
 func merge(a, b map[string]string) map[string]string {
 	result := make(map[string]string)
@@ -44,9 +26,9 @@ func newTestService(name string, tags map[string]string) *APIGatewayService {
 
 	return &APIGatewayService{
 		region: "us-west-2",
-		restAPI: &apigateway.RestApi{
+		restAPI: &types.RestApi{
 			Name: &name,
-			Tags: ptrMap(newTags),
+			Tags: newTags,
 		},
 	}
 }

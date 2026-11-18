@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/aws/aws-sdk-go-v2/service/apigateway/types"
 )
 
 func stringP(v string) *string { return &v }
@@ -15,12 +15,12 @@ func Test_TagsReplacement(t *testing.T) {
 	serviceName := stage + "-my-service"
 	service := &APIGatewayService{
 		region: "us-west-2",
-		restAPI: &apigateway.RestApi{
+		restAPI: &types.RestApi{
 			Name: &serviceName,
-			Tags: map[string]*string{
-				"STAGE":                         stringP(stage),
-				"aws:cloudformation:logical-id": stringP(logicalID),
-				"aws:cloudformation:stack-id":   stringP("arn:aws:cloudformation:us-west-2:1234567:stack/my-service-" + stage + "/7fd50290-84eb-11ec-93c7-0ac7bf603f03"),
+			Tags: map[string]string{
+				"STAGE":                         stage,
+				"aws:cloudformation:logical-id": logicalID,
+				"aws:cloudformation:stack-id":   "arn:aws:cloudformation:us-west-2:1234567:stack/my-service-" + stage + "/7fd50290-84eb-11ec-93c7-0ac7bf603f03",
 			},
 		},
 	}
@@ -47,10 +47,10 @@ func Test_NameParsing(t *testing.T) {
 			"my-service",
 			&APIGatewayService{
 				region: "us-west-2",
-				restAPI: &apigateway.RestApi{
+				restAPI: &types.RestApi{
 					Name: stringP("staging-my-service"),
-					Tags: map[string]*string{
-						"STAGE": stringP("staging"),
+					Tags: map[string]string{
+						"STAGE": "staging",
 					},
 				},
 			},
@@ -59,10 +59,10 @@ func Test_NameParsing(t *testing.T) {
 			"my-service",
 			&APIGatewayService{
 				region: "us-west-2",
-				restAPI: &apigateway.RestApi{
+				restAPI: &types.RestApi{
 					Name: stringP("my-service-staging"),
-					Tags: map[string]*string{
-						"STAGE": stringP("staging"),
+					Tags: map[string]string{
+						"STAGE": "staging",
 					},
 				},
 			},
@@ -71,10 +71,10 @@ func Test_NameParsing(t *testing.T) {
 			"my-service",
 			&APIGatewayService{
 				region: "us-west-2",
-				restAPI: &apigateway.RestApi{
+				restAPI: &types.RestApi{
 					Name: stringP("staging-my-service"),
-					Tags: map[string]*string{
-						"service": stringP("my-service"),
+					Tags: map[string]string{
+						"service": "my-service",
 					},
 				},
 			},
@@ -111,10 +111,10 @@ func Test_TagsTemplate(t *testing.T) {
 
 	service := &APIGatewayService{
 		region: "us-west-2",
-		restAPI: &apigateway.RestApi{
+		restAPI: &types.RestApi{
 			Name: stringP("staging-my-service"),
-			Tags: map[string]*string{
-				"STAGE": stringP("staging"),
+			Tags: map[string]string{
+				"STAGE": "staging",
 			},
 		},
 		StageNames: []string{"stg", "uat"},

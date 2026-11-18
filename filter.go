@@ -40,13 +40,12 @@ func parseFilter(input string) (*Filter, error) {
 }
 
 func (f *Filter) filterMatches(service *APIGatewayService) bool {
-	tagValue := service.restAPI.Tags[f.name]
-	if tagValue == nil {
+	tagValue, ok := service.restAPI.Tags[f.name]
+	if !ok {
 		return false
 	}
-	v := *tagValue
 
-	match, err := regexp.MatchString(f.values, v)
+	match, err := regexp.MatchString(f.values, tagValue)
 	if err != nil {
 		fmt.Printf("[ERROR] Invalid regexp: %s, %s\n", f.values, err)
 		return false
