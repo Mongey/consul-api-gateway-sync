@@ -8,14 +8,14 @@ import (
 	"strings"
 
 	"github.com/Masterminds/sprig"
-	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/aws/aws-sdk-go-v2/service/apigateway/types"
 	consulapi "github.com/hashicorp/consul/api"
 )
 
 const applicationName = "consul-api-gateway-sync"
 
 // NewService creates a APIGatewayService from a RestAPI
-func NewService(restAPI *apigateway.RestApi, region string, stageNames []string) *APIGatewayService {
+func NewService(restAPI *types.RestApi, region string, stageNames []string) *APIGatewayService {
 	return &APIGatewayService{
 		region:     region,
 		restAPI:    restAPI,
@@ -25,7 +25,7 @@ func NewService(restAPI *apigateway.RestApi, region string, stageNames []string)
 
 type APIGatewayService struct {
 	region     string
-	restAPI    *apigateway.RestApi
+	restAPI    *types.RestApi
 	StageNames []string
 }
 
@@ -33,7 +33,7 @@ type APIGatewayService struct {
 func (a *APIGatewayService) Tags() map[string]string {
 	tags := make(map[string]string)
 	for k, v := range a.restAPI.Tags {
-		tags[k] = *v
+		tags[k] = v
 	}
 	return tags
 }
@@ -41,7 +41,7 @@ func (a *APIGatewayService) Tags() map[string]string {
 func (a *APIGatewayService) nodeTags() map[string]string {
 	tags := make(map[string]string)
 	for k, v := range a.restAPI.Tags {
-		tags[validTag(k)] = validTag(*v)
+		tags[validTag(k)] = validTag(v)
 	}
 	return tags
 }
@@ -98,11 +98,7 @@ func (a *APIGatewayService) ConsulService(templateTags []string) *consulapi.Cata
 }
 
 func (a *APIGatewayService) Stage() string {
-	stage := a.restAPI.Tags["STAGE"]
-	if stage == nil {
-		return ""
-	}
-	return *stage
+	return a.restAPI.Tags["STAGE"]
 }
 
 type TemplateContext struct {
@@ -163,9 +159,9 @@ func (a *APIGatewayService) Name() string {
 		name = strings.Replace(name, fmt.Sprintf("-%s", a.Stage()), "", 1)
 	}
 
-	serviceName := a.restAPI.Tags["service"]
-	if serviceName != nil {
-		return *serviceName
+	serviceName, ok := a.restAPI.Tags["service"]
+	if ok {
+		return serviceName
 	}
 
 	return name

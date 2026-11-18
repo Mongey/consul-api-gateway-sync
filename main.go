@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/apigateway"
 	consulapi "github.com/hashicorp/consul/api"
 	hclog "github.com/hashicorp/go-hclog"
 )
@@ -48,13 +48,16 @@ type Client struct {
 	tags                 []string
 	region               string
 	logger               hclog.Logger
-	svc                  *apigateway.APIGateway
+	svc                  *apigateway.Client
 	consulClient         *consulapi.Client
 }
 
 func NewClient(flags []string, exclusionFilterFlags []string, tags []string, region string, logger hclog.Logger) (*Client, error) {
-	mySession := session.Must(session.NewSession())
-	svc := apigateway.New(mySession, aws.NewConfig().WithRegion(region))
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
+	if err != nil {
+		return nil, err
+	}
+	svc := apigateway.NewFromConfig(cfg)
 	consulClient, err := consulapi.NewClient(consulapi.DefaultConfig())
 	if err != nil {
 		logger.Error("failed to build consul client", "error", err)
@@ -65,7 +68,7 @@ func NewClient(flags []string, exclusionFilterFlags []string, tags []string, reg
 }
 
 func (c *Client) registerServices() error {
-	restAPIResp, err := c.svc.GetRestApis(&apigateway.GetRestApisInput{})
+	restAPIResp, err := c.svc.GetRestApis(context.Background(), &apigateway.GetRestApisInput{})
 	if err != nil {
 		c.logger.Error("Failed to list rest apis", "error", err)
 		return err
@@ -75,7 +78,7 @@ func (c *Client) registerServices() error {
 
 	services := make([]*APIGatewayService, 0)
 	for _, item := range restAPIResp.Items {
-		stages, err := c.svc.GetStages(&apigateway.GetStagesInput{RestApiId: item.Id})
+		stages, err := c.svc.GetStages(context.Background(), &apigateway.GetStagesInput{RestApiId: item.Id})
 		if err != nil {
 			c.logger.Error("Failed to list stages", "error", err)
 			return err
@@ -88,7 +91,7 @@ func (c *Client) registerServices() error {
 			}
 		}
 
-		service := NewService(item, c.region, stageNames)
+		service := NewService(&item, c.region, stageNames)
 
 		c.logger.Debug("RestAPI",
 			"service_id", service.ID(),
@@ -129,8 +132,6 @@ func main() {
 	})
 	err := syncGateways(logger)
 
-	if err != nil {
-		logger.Error("Syncing Gateways failed", "error", err)
-		os.Exit(1)
-	}
+	logger.Error("Syncing Gateways failed", "error", err)
+	os.Exit(1)
 }
